@@ -126,9 +126,10 @@ sample_distribution <- function(means,SDs,group_num_samples){
   return(store_sample_dist)
 }
 
+gr_1_dist_matrix = sample_distribution(gr_1, SDs,0.5*num_samples)
+gr_2_dist_matrix = sample_distribution(gr_2, SDs,(1-0.5)*num_samples)
 
-
-
+combined_samples = cbind(gr_1_dist_matrix, gr_2_dist_matrix)
 
 
 
