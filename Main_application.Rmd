@@ -101,14 +101,14 @@ for(i in 1:length(means)){ #runs through every mean values of each CpG site
    print(record)
 }
 
-
 str(gr_1)
 str(gr_2)
-  return()
+  return(gr_1, gr_2)
 }
 
-gr_2_mean <- calculate_means(gr_2) 
+gr_2_mean <- calculate_means(gr_2) #?is it necessarily 
 
+#write.table(record, file = 'recorded_located_treatment_effect.txt')
 
 
 ```
@@ -131,7 +131,7 @@ gr_2_dist_matrix = sample_distribution(gr_2, SDs,(1-0.5)*num_samples)
 
 combined_samples = cbind(gr_1_dist_matrix, gr_2_dist_matrix)
 
-
+write.table(combined_samples,file='simulated_data.txt')
 
 ```
 
