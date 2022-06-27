@@ -1,0 +1,104 @@
+---
+title: "Smilator_omics"
+author: "Anastasia&Nasimeh"
+date: "6/27/2022"
+output: html_document
+---
+# Simulator code for data generation process of omics data. 
+
+
+## Anastasia_Simulator
+
+# Purpose: -->
+#<!-- Simulating methylation data based on real-world data. Replicates the data generating process of real-world data using simulation parameters #(e.g. number of samples) and generates a synthetic dataset with induced treatment effects.  -->
+
+#<!-- Result: -->
+#<!-- A beta matrix is equivalent to a real-world matrix with adjusted values.  -->
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(GEOquery) #bioconductor
+```
+
+
+```{r, message=FALSE, cache=FALSE, echo=FALSE,warning=FALSE}
+GEO_real_world_data <- "GSE145714" # ID for real world data 
+gset <- getGEO(GEO_real_world_data, GSEMatrix =TRUE, getGPL=FALSE, destdir="example_dataset/")
+gset <- gset$GSE145714_series_matrix.txt.gz
+
+clinical_data <- pData(gset) # clinico-pathological description
+clinical_data <- clinical_data[,c(2,41:44)]
+colnames(clinical_data)[c(2:5)] <- c("hiv_status", "gender", "tb_status", "timepoint")
+clinical_data <- clinical_data[order(clinical_data$tb_status),]
+beta_matrix <- exprs(gset)
+rm(gset)
+
+
+
+```
+
+```{r pressure, echo=FALSE}
+#default parameters for the simulator
+num_samples <- 500
+healthy_proportion <- 0.5
+num_mutated_CpGs <- 200
+num_true_mutated <- 100
+treatment_effect <- 0.3
+
+```
+
+```{r pressure, echo=FALSE}
+# Function for calculating the mean of CpGs across all samples.
+calculate_means <- function (beta_values_matrix) {
+means <- matrixStats::rowMeans2(beta_values_matrix)
+return(means)
+}
+```
+
+```{r pressure, echo=FALSE}
+# Function for calculating the standard deviation of CpGs across all samples.
+calculate_SD <- function (beta_values_matrix) {
+SD <- matrixStats::rowSds(beta_values_matrix)
+return(SD)
+}
+```
+
+```{r pressure, echo=FALSE}
+means = calculate_means(beta_matrix)
+#  Function to calculate distribution parameters for groups
+distribution_parameters <- function(means,num_samples, healthy_proportion, treatment_effect, num_true_mutated){
+means = na.omit(means)
+prob_group_annotation <- sample(0:1, size=length(means), replace = T)
+
+
+gr_1 = means
+gr_2 = means
+
+for(i in 1:length(means)){
+  if(prob_group_annotation[i] == 1){
+    if(gr_2[i] + treatment_effect>=1){
+     gr_2[i] = 1
+    }
+    if(gr_2[i] + treatment_effect>0 & gr_2[i] + treatment_effect<1){
+       mutated[i] = gr_2[i] + treatment_effect
+    }
+  else if(prob_group_annotation[i]==0){
+      gr_2[i] = gr_2[i]
+  }
+  print(gr_2)
+}
+}
+
+
+str(gr_1)
+str(gr_2)
+  return()
+}
+
+
+```
+
+
+
