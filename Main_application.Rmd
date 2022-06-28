@@ -10,10 +10,10 @@ output: html_document
 ## Anastasia_Simulator
 
 # Purpose: -->
-#<!-- Simulating methylation data based on real-world data. Replicates the data generating process of real-world data using simulation parameters #(e.g. number of samples) and generates a synthetic dataset with induced treatment effects.  -->
+# Simulating methylation data based on real-world data. Replicates the data generating process of real-world data using simulation parameters #(e.g. number of samples) and generates a synthetic dataset with induced treatment effects.  -->
 
-#<!-- Result: -->
-#<!-- A beta matrix is equivalent to a real-world matrix with adjusted values.  -->
+# Result: -->
+# A beta matrix is equivalent to a real-world matrix with adjusted values.  -->
 
 
 ```{r setup, include=FALSE}
@@ -34,9 +34,6 @@ colnames(clinical_data)[c(2:5)] <- c("hiv_status", "gender", "tb_status", "timep
 clinical_data <- clinical_data[order(clinical_data$tb_status),]
 beta_matrix <- exprs(gset)
 rm(gset)
-
-
-
 ```
 
 ```{r pressure, echo=FALSE}
@@ -66,22 +63,18 @@ return(SD)
 ```
 
 ```{r pressure, echo=FALSE}
-means = calculate_means(beta_matrix) #calling function calculating means 
-SDs = calculate_SD(beta_matrix) 
+
 #  Function to calculate distribution parameters for groups
-distribution_parameters <- function(means,num_samples, healthy_proportion, treatment_effect, num_true_mutated){
-means = na.omit(means) 
-SDs= na.omit(SDs)
+distribution_parameters <- function(means, treatment_effect){ #introduce_treatment_effect?
+  #inducing_group_differences 
+  #num_samples,healthy_proportion,num_true_mutated (extra parameters not yet included)
+
 prob_group_annotation <- sample(0:1, size=length(means), replace = T)  # creating vector of zero and 1 which represents assign groups
 
-
-gr_1 = means
-gr_2 = means
-
 record = vector()
-
-#
+gr_2 = means # empty vector to store adjusted  means
 for(i in 1:length(means)){ #runs through every mean values of each CpG site
+  print(i)
   if(prob_group_annotation[i] == 1){ #selecting group 1 
     record [i] = TRUE
     if(gr_2[i] + treatment_effect>=1){ #adjusting changed value within its boundaries
@@ -96,38 +89,49 @@ for(i in 1:length(means)){ #runs through every mean values of each CpG site
     record [i] = FALSE
       gr_2[i] = gr_2[i] #when prob_group_annotation is zero we don't make any change - equal to itself 
   }
-    
-  #print(gr_2)
-   print(record)
+   #print(record)
 }
-
-str(gr_1)
-str(gr_2)
-  return(gr_1, gr_2)
-}
-
-gr_2_mean <- calculate_means(gr_2) #?is it necessarily 
-
+#str(gr_1)
+#str(gr_2)
+  return(gr_2)
 #write.table(record, file = 'recorded_located_treatment_effect.txt')
-
+}
 
 ```
 
 ```{r pressure, echo=FALSE}
+means = calculate_means(beta_matrix) #calling function calculating means of CpGs across all samples 
+SDs = calculate_SD(beta_matrix) #calling function calculating SDs of CpGs across all samples
+means = na.omit(means) 
+SDs= na.omit(SDs)
+
+gr_1 = means #(reference group)
+
+gr_2 = distribution_parameters(means, treatment_effect)
+
+```
+
+
+```{r pressure, echo=FALSE}
+gr_2_mean <- calculate_means(gr_2) # The output fro the for loop is a vector of means + treatment effect, it does not seems reasonable to calculate mean of mean
+
+```
+
+
+```{r pressure, echo=FALSE}
 #Get sample distribution of groups 
 
-group_num_samples = 250
-sample_distribution <- function(means,SDs,group_num_samples){
-  store_sample_dist = matrix(ncol=group_num_samples,nrow = length(means))
-  for (i in 1:group_num_samples){
+sample_distribution <- function(means,SDs,num_samples, healthy_proportion){
+  store_sample_dist = matrix(ncol=num_samples,nrow = length(means))
+  for (i in 1:num_samples){
    ind_sample=rnorm(n=length(means),mean=means,sd=SDs) 
    store_sample_dist[,i] =ind_sample
   }
   return(store_sample_dist)
 }
 
-gr_1_dist_matrix = sample_distribution(gr_1, SDs,0.5*num_samples)
-gr_2_dist_matrix = sample_distribution(gr_2, SDs,(1-0.5)*num_samples)
+gr_1_dist_matrix = sample_distribution(gr_1, SDs,healthy_proportion*num_samples)
+gr_2_dist_matrix = sample_distribution(gr_2, SDs,(1-healthy_proportion)*num_samples)
 
 combined_samples = cbind(gr_1_dist_matrix, gr_2_dist_matrix)
 
