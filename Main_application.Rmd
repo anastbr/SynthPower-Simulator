@@ -20,6 +20,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(GEOquery) #bioconductor
+
 ```
 
 
@@ -34,22 +35,27 @@ colnames(clinical_data)[c(2:5)] <- c("hiv_status", "gender", "tb_status", "timep
 clinical_data <- clinical_data[order(clinical_data$tb_status),]
 beta_matrix <- exprs(gset)
 rm(gset)
+
+#selecting testing data
+beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
 ```
 
 ```{r pressure, echo=FALSE}
 #default parameters for the simulator
 num_samples <- 500
 healthy_proportion <- 0.5
-num_mutated_CpGs <- 200
-num_true_mutated <- 100
+num_true_modified <- 100
 treatment_effect <- 0.3
+user_specified_n_CpGs <- 1200
 
 ```
 
 ```{r pressure, echo=FALSE}
 # Function for calculating the mean of CpGs across all samples.
 calculate_means <- function (beta_values_matrix) {
-means <- matrixStats::rowMeans2(beta_values_matrix)
+# check stop if not() to make sure there are no non numeric values.
+means <- rowMeans(beta_values_matrix, na.rm=TRUE)# if all values within a row are NA produces NaN
+means <- na.omit(means) #add handling of NAs if values in the the vector are NAs
 return(means)
 }
 ```
@@ -57,10 +63,39 @@ return(means)
 ```{r pressure, echo=FALSE}
 # Function for calculating the standard deviation of CpGs across all samples.
 calculate_SD <- function (beta_values_matrix) {
-SD <- matrixStats::rowSds(beta_values_matrix)
+SD <- matrixStats::rowSds(beta_values_matrix, na.rm=TRUE)
+SD <- na.omit(SD) #add handling of NAs if values in the the vector are NAs
 return(SD)
 }
 ```
+
+```{r pressure, echo=FALSE}
+#combining means asn SDs as one object 
+means_real_world =calculate_means(beta_matrix)
+SD_real_world=calculate_SD(beta_matrix)
+means_SD_real_world=cbind(m,s)
+
+```
+
+```{r pressure, echo=FALSE}
+# function _means_list_user_defined (generate new vector of means and SDs of CpGs based on user input, means and SDs of beta_matrix)
+#return(mean,sd)
+set.seed(42)
+
+user_specified_num_elements <- function(means, user_specified_n_CpGs){
+sampling_indices = sample(1:dim(c)[1],user_specified_n_CpGs, replace = TRUE)
+return(sampling_indices)
+}
+
+
+```
+
+
+```{r pressure, echo=FALSE}
+indices = user_specified_num_elements(means_SD_real_world)
+means_SD = means_SD_real_world %in% 
+```
+
 
 ```{r pressure, echo=FALSE}
 
@@ -94,7 +129,7 @@ for(i in 1:length(means)){ #runs through every mean values of each CpG site
 #str(gr_1)
 #str(gr_2)
   return(gr_2)
-#write.table(record, file = 'recorded_located_treatment_effect.txt')
+#write.table(record, file ='recorded_located_treatment_effect.txt')
 }
 
 ```
@@ -121,7 +156,7 @@ gr_2_mean <- calculate_means(gr_2) # The output fro the for loop is a vector of 
 ```{r pressure, echo=FALSE}
 #Get sample distribution of groups 
 
-sample_distribution <- function(means,SDs,num_samples, healthy_proportion){
+sample_distribution <- function(means_vector,SDs_vector,num_samples, healthy_proportion){
   store_sample_dist = matrix(ncol=num_samples,nrow = length(means))
   for (i in 1:num_samples){
    ind_sample=rnorm(n=length(means),mean=means,sd=SDs) 
@@ -135,7 +170,7 @@ gr_2_dist_matrix = sample_distribution(gr_2, SDs,(1-healthy_proportion)*num_samp
 
 combined_samples = cbind(gr_1_dist_matrix, gr_2_dist_matrix)
 
-write.table(combined_samples,file='simulated_data.txt')
+#write.table(combined_samples,file='simulated_data.txt')
 
 ```
 
