@@ -15,41 +15,6 @@ output: html_document
 # Result: -->
 # A beta matrix is equivalent to a real-world matrix with adjusted values.  -->
 
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
-library(GEOquery) #bioconductor
-
-```
-
-
-```{r, message=FALSE, cache=FALSE, echo=FALSE,warning=FALSE}
-GEO_real_world_data <- "GSE145714" # ID for real world data 
-gset <- getGEO(GEO_real_world_data, GSEMatrix =TRUE, getGPL=FALSE, destdir="example_dataset/")
-gset <- gset$GSE145714_series_matrix.txt.gz
-
-clinical_data <- pData(gset) # clinico-pathological description
-clinical_data <- clinical_data[,c(2,41:44)]
-colnames(clinical_data)[c(2:5)] <- c("hiv_status", "gender", "tb_status", "timepoint")
-clinical_data <- clinical_data[order(clinical_data$tb_status),]
-beta_matrix <- exprs(gset)
-rm(gset)
-
-#selecting testing data
-beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
-```
-
-```{r pressure, echo=FALSE}
-#default parameters for the simulator
-num_samples <- 500
-healthy_proportion <- 0.5
-num_true_modified <- 100
-treatment_effect <- 0.3
-user_specified_n_CpGs <- 1200
-
-```
-
 ```{r pressure, echo=FALSE}
 # Function for calculating the mean of CpGs across all samples.
 calculate_means <- function (beta_values_matrix) {
@@ -69,13 +34,6 @@ return(SD)
 }
 ```
 
-```{r pressure, echo=FALSE}
-#combining means asn SDs as one object 
-means_real_world =calculate_means(beta_matrix)
-SD_real_world=calculate_SD(beta_matrix)
-means_SD_real_world=cbind(m,s)
-
-```
 
 ```{r pressure, echo=FALSE}
 # function _means_list_user_defined (generate new vector of means and SDs of CpGs based on user input, means and SDs of beta_matrix)
@@ -83,7 +41,7 @@ means_SD_real_world=cbind(m,s)
 set.seed(42)
 
 user_specified_num_elements <- function(means, user_specified_n_CpGs){
-sampling_indices = sample(1:dim(c)[1],user_specified_n_CpGs, replace = TRUE)
+sampling_indices = sample(1:dim(means)[1],user_specified_n_CpGs, replace = TRUE)
 return(sampling_indices)
 }
 
@@ -92,85 +50,115 @@ return(sampling_indices)
 
 
 ```{r pressure, echo=FALSE}
-indices = user_specified_num_elements(means_SD_real_world)
-means_SD = means_SD_real_world %in% 
+
+induce_group_differnces <- function(num_true_modified, vector_of_ref_means, effect_size, path_to_record_truly_different_indices){ #record=T
+set.seed(42)
+  
+truly_different_indices <- sample(1:length(vector_of_ref_means), size=num_true_modified, replace = FALSE)
+filename <- paste0(path_to_record_truly_different_indices, '/truly_different_sites_indices.txt')
+write.table(truly_different_indices, filename)
+vector_of_affected_means <- vector_of_ref_means
+vector_of_affected_means[truly_different_indices] <- vector_of_ref_means[truly_different_indices]+effect_size
+vector_of_affected_means <- ifelse(vector_of_affected_means>1, 1, vector_of_affected_means)
+return(list(vector_of_affected_means,truly_different_indices))
+}
 ```
 
 
+
 ```{r pressure, echo=FALSE}
-
-#  Function to calculate distribution parameters for groups
-distribution_parameters <- function(means, treatment_effect){ #introduce_treatment_effect?
-  #inducing_group_differences 
-  #num_samples,healthy_proportion,num_true_mutated (extra parameters not yet included)
-
-prob_group_annotation <- sample(0:1, size=length(means), replace = T)  # creating vector of zero and 1 which represents assign groups
-
-record = vector()
-gr_2 = means # empty vector to store adjusted  means
-for(i in 1:length(means)){ #runs through every mean values of each CpG site
-  print(i)
-  if(prob_group_annotation[i] == 1){ #selecting group 1 
-    record [i] = TRUE
-    if(gr_2[i] + treatment_effect>=1){ #adjusting changed value within its boundaries
-     gr_2[i] = 1 
-    }
-    if(gr_2[i] + treatment_effect>0 & gr_2[i] + treatment_effect<1){ 
-      gr_2[i] = gr_2[i] + treatment_effect #adding the treatment effect to clinical population
-    }
- 
-  }
-  else if(prob_group_annotation[i]==0){ #reference group
-    record [i] = FALSE
-      gr_2[i] = gr_2[i] #when prob_group_annotation is zero we don't make any change - equal to itself 
-  }
-   #print(record)
-}
-#str(gr_1)
-#str(gr_2)
-  return(gr_2)
-#write.table(record, file ='recorded_located_treatment_effect.txt')
+get_group_number = function(healthy_proportion, total_num_samples){
+g1_number_of_samples = healthy_proportion*total_num_samples
+g2_number_of_samples = total_num_samples-g1_number_of_samples
+ref_diff = c(g1_number_of_samples ,g2_number_of_samples)
+names(ref_diff) = c('Reference','Diseased')
+return(ref_diff)
 }
 
 ```
 
+
+
 ```{r pressure, echo=FALSE}
-means = calculate_means(beta_matrix) #calling function calculating means of CpGs across all samples 
-SDs = calculate_SD(beta_matrix) #calling function calculating SDs of CpGs across all samples
-means = na.omit(means) 
-SDs= na.omit(SDs)
-
-gr_1 = means #(reference group)
-
-gr_2 = distribution_parameters(means, treatment_effect)
-
+sample_distribution = function(means_vector, sds_vector, number_of_samples_in_group){
+  all_cpgs <- c()
+for(i in 1:length(means_vector)){
+cpg_i <- rnorm(number_of_samples_in_group, mean = means_vector[i], sd = sds_vector[i])
+all_cpgs <- rbind(all_cpgs,cpg_i)
+}
+return(all_cpgs)
+}
 ```
 
 
 ```{r pressure, echo=FALSE}
-gr_2_mean <- calculate_means(gr_2) # The output fro the for loop is a vector of means + treatment effect, it does not seems reasonable to calculate mean of mean
-
-```
-
-
-```{r pressure, echo=FALSE}
-#Get sample distribution of groups 
-
-sample_distribution <- function(means_vector,SDs_vector,num_samples, healthy_proportion){
-  store_sample_dist = matrix(ncol=num_samples,nrow = length(means))
-  for (i in 1:num_samples){
-   ind_sample=rnorm(n=length(means),mean=means,sd=SDs) 
-   store_sample_dist[,i] =ind_sample
-  }
-  return(store_sample_dist)
+generate_cpgs_for_groups = function(g1_means_vector, g2_means_vector, vector_sd, g1_number_of_samples, g2_number_of_samples){
+g1_cpgs <- sample_distribution(g1_means_vector, vector_sd, g1_number_of_samples)
+g2_cpgs <- sample_distribution(g2_means_vector, vector_sd, g2_number_of_samples)
+cpgs <- cbind(g1_cpgs, g2_cpgs)
+return(cpgs)
 }
 
-gr_1_dist_matrix = sample_distribution(gr_1, SDs,healthy_proportion*num_samples)
-gr_2_dist_matrix = sample_distribution(gr_2, SDs,(1-healthy_proportion)*num_samples)
-
-combined_samples = cbind(gr_1_dist_matrix, gr_2_dist_matrix)
-
-#write.table(combined_samples,file='simulated_data.txt')
-
 ```
+
+
+```{r, message=FALSE, cache=FALSE, echo=FALSE,warning=FALSE}
+#default parameters for the simulator
+total_num_samples <- 500
+healthy_proportion <- 0.5
+num_true_modified <- 100
+effect_size <- 0.3
+user_specified_n_CpGs <- 1200
+```
+
+```{r pressure, echo=FALSE}
+
+library(GEOquery) #bioconductor
+```
+
+```{r pressure, echo=FALSE}
+GEO_real_world_data <- "GSE145714" # ID for real world data 
+gset <- getGEO(GEO_real_world_data, GSEMatrix =TRUE, getGPL=FALSE, destdir="example_dataset/")
+gset <- gset$GSE145714_series_matrix.txt.gz
+
+clinical_data <- pData(gset) # clinico-pathological description
+clinical_data <- clinical_data[,c(2,41:44)]
+colnames(clinical_data)[c(2:5)] <- c("hiv_status", "gender", "tb_status", "timepoint")
+clinical_data <- clinical_data[order(clinical_data$tb_status),]
+beta_matrix <- exprs(gset)
+rm(gset)
+
+#selecting testing data
+beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
+```
+
+```{r pressure, echo=FALSE}
+simulator = function(total_num_samples,healthy_proportion,num_true_modified,user_specified_n_CpGs,effect_size, user_path){
+  
+#combining means asn SDs as one object 
+means_real_world = calculate_means(beta_matrix)
+SD_real_world = calculate_SD(beta_matrix)
+means_SD_real_world = cbind(means_real_world,SD_real_world)
+
+indices = user_specified_num_elements(means_SD_real_world, user_specified_n_CpGs)
+means_SD = means_SD_real_world[indices,]
+vector_of_ref_means = means_SD[,1]
+vector_sd = means_SD[,2]
+
+user_path ="C:/Users/anast/Documents/Master 2021/Summer project 2022"
+list_indices_affected_means = induce_group_differnces(num_true_modified,vector_of_ref_means,effect_size,user_path)
+vector_of_affected_means = list_indices_affected_means[[1]]
+
+g1_number_of_samples=get_group_number(healthy_proportion, total_num_samples)[1]
+g2_number_of_samples=get_group_number(healthy_proportion, total_num_samples)[2]
+
+simulated_data = generate_cpgs_for_groups(vector_of_ref_means,vector_of_affected_means, vector_sd, g1_number_of_samples, g2_number_of_samples)
+file_name = paste0(user_path,"/Simulated data.txt")
+write.table(simulated_data, file_name,col.names = FALSE, row.names = FALSE)
+}
+```
+
+
+
+
 
