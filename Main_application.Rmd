@@ -131,21 +131,24 @@ means_real_world = calculate_means(beta_matrix)
 SD_real_world = calculate_SD(beta_matrix)
 means_SD_real_world = cbind(means_real_world,SD_real_world)
 
+#Creating data based on user defined CpGs through sampling of emans and SDs of the real world data
 indices = user_specified_num_elements(means_SD_real_world, user_specified_n_CpGs)
-means_SD = means_SD_real_world[indices,]
+means_SD = means_SD_real_world[indices,] 
 vector_of_ref_means = means_SD[,1]
 vector_sd = means_SD[,2]
 
-
+#Introducing effect size and thus creating two groups.
 list_indices_affected_means = induce_group_differnces(num_true_modified,vector_of_ref_means,effect_size,user_path)
 vector_of_affected_means = list_indices_affected_means[[1]]
 
 g1_number_of_samples=get_group_number(healthy_proportion, total_num_samples)[1]
 g2_number_of_samples=get_group_number(healthy_proportion, total_num_samples)[2]
 
+#Create matrix of beta values for the user defined number of samples per group
 simulated_data = generate_cpgs_for_groups(vector_of_ref_means,vector_of_affected_means, vector_sd, g1_number_of_samples, g2_number_of_samples)
 file_name_simulated_data = paste0(user_path,"/Simulated data.txt")
 write.table(simulated_data, file_name_simulated_data,col.names = FALSE, row.names = FALSE)
+# Save the running parameters, simultaed methylation data matrix, and the truly differentially methylated CpG sites. 
 save_parameters = list(total_num_samples=total_num_samples, healthy_proportion=healthy_proportion,num_true_modified=num_true_modified,user_specified_n_CpGs=user_specified_n_CpGs,effect_size=effect_size)
 file_name_parameters = paste0(user_path,"/User Parameters.txt")
 write.table(save_parameters,file_name_parameters,row.names = FALSE)
@@ -168,11 +171,10 @@ user_specified_n_CpGs <- 500
 
 simulator(total_num_samples, healthy_proportion, num_true_modified, user_specified_n_CpGs, effect_size, user_path)
 
-files = 
-write.table(save_parameters,file_name_parameters,row.names = FALSE)
+zipfile = "C:/Users/anast/Documents/Master 2021/Summer project 2022/test.zip"
+my_files = c("C:/Users/anast/Documents/Master 2021/Summer project 2022/Simulated_data.txt","C:/Users/anast/Documents/Master 2021/Summer project 2022/truly_different_sites_indices.txt","C:/Users/anast/Documents/Master 2021/Summer project 2022/User_Parameters.txt")
 
-#Zip_Files <- list.files(path = user_path, pattern = ".txt$")
+zip::zipr(zipfile = zipfile, files = my_files)
 
-#zip(zipfile = "TestZip", files = Zip_Files)
 
 ```
