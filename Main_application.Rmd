@@ -56,7 +56,7 @@ set.seed(42)
   
 truly_different_indices <- sample(1:length(vector_of_ref_means), size=num_true_modified, replace = FALSE)
 filename <- paste0(path_to_record_truly_different_indices, '/truly_different_sites_indices.txt')
-write.table(truly_different_indices, filename, row.names = FALSE, col.names = FALSE)
+write.table(truly_different_indices, filename, row.names = FALSE, col.names = FALSE, sep = " ")
 vector_of_affected_means <- vector_of_ref_means
 vector_of_affected_means[truly_different_indices] <- vector_of_ref_means[truly_different_indices]+effect_size
 vector_of_affected_means <- ifelse(vector_of_affected_means>1, 1, vector_of_affected_means)
@@ -70,9 +70,9 @@ return(list(vector_of_affected_means,truly_different_indices))
 get_group_number = function(healthy_proportion, total_num_samples){
 g1_number_of_samples = healthy_proportion*total_num_samples
 g2_number_of_samples = total_num_samples-g1_number_of_samples
-ref_diff = c(g1_number_of_samples ,g2_number_of_samples)
-names(ref_diff) = c('Reference','Diseased')
-return(ref_diff)
+g1_g2 = c(g1_number_of_samples ,g2_number_of_samples)
+names(g1_g2) = c('Reference','Diseased')
+return(g1_g2)
 }
 
 ```
@@ -82,10 +82,13 @@ return(ref_diff)
 ```{r pressure, echo=FALSE}
 sample_distribution = function(means_vector, sds_vector, number_of_samples_in_group){
   all_cpgs <- c()
+  cpg_name <- c()
 for(i in 1:length(means_vector)){
 cpg_i <- rnorm(number_of_samples_in_group, mean = means_vector[i], sd = sds_vector[i])
+cpg_name[i] <- paste0("cpg",i)
 all_cpgs <- rbind(all_cpgs,cpg_i)
 }
+rownames(all_cpgs) <- cpg_name
 return(all_cpgs)
 }
 ```
@@ -98,9 +101,15 @@ g2_cpgs <- sample_distribution(g2_means_vector, vector_sd, g2_number_of_samples)
 cpgs <- cbind(g1_cpgs, g2_cpgs)
 return(cpgs)
 }
-
 ```
 
+```{r pressure, echo=FALSE}
+generate_col_names = function(data_frame,g1_number_of_samples,g2_number_of_samples){
+  g1_sample_names= paste0("Gr1_Samp",1:g1_number_of_samples)
+  g2_sample_names= paste0("Gr2_Samp",1:g2_number_of_samples)
+  all_sample_names = c(g1_sample_names, g2_sample_names)
+}
+```
 
 ```{r pressure, echo=FALSE}
 
@@ -146,12 +155,22 @@ g2_number_of_samples=get_group_number(healthy_proportion, total_num_samples)[2]
 
 #Create matrix of beta values for the user defined number of samples per group
 simulated_data = generate_cpgs_for_groups(vector_of_ref_means,vector_of_affected_means, vector_sd, g1_number_of_samples, g2_number_of_samples)
+
+colnames(simulated_data) = generate_col_names(simulated_data,g1_number_of_samples,g2_number_of_samples)
+
 file_name_simulated_data = paste0(user_path,"/Simulated data.txt")
 write.table(simulated_data, file_name_simulated_data,col.names = FALSE, row.names = FALSE)
-# Save the running parameters, simultaed methylation data matrix, and the truly differentially methylated CpG sites. 
-save_parameters = list(total_num_samples=total_num_samples, healthy_proportion=healthy_proportion,num_true_modified=num_true_modified,user_specified_n_CpGs=user_specified_n_CpGs,effect_size=effect_size)
-file_name_parameters = paste0(user_path,"/User Parameters.txt")
-write.table(save_parameters,file_name_parameters,row.names = FALSE)
+# Save the running parameters, simultaed methylation data matrix, and the truly differentially methylated CpG sites.
+param_names = c("Total number of samples","User-spesified number of CpGs","Healthy proportion","Effect size","Number of true modified CpG sites")
+param_values = c(total_num_samples,user_specified_n_CpGs,healthy_proportion,effect_size,num_true_modified)
+param_summary <- as.data.frame(matrix(nrow = length(param_names), ncol = 2))
+
+names(param_summary) = c("Parameter","Value")
+param_summary$Parameter = param_names
+param_summary$Value = param_values
+
+file_name_parameters = paste0(user_path,"/User_Parameters.txt")
+write.table(param_summary,file_name_parameters,row.names = FALSE, col.names = TRUE, sep = " ")
 }
 ```
 
@@ -166,7 +185,7 @@ total_num_samples <- 500
 healthy_proportion <- 0.3
 num_true_modified <- 30
 effect_size <- 0.3
-user_specified_n_CpGs <- 500
+user_specified_n_CpGs <- 1000
 
 
 simulator(total_num_samples, healthy_proportion, num_true_modified, user_specified_n_CpGs, effect_size, user_path)
