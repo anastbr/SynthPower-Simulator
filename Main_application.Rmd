@@ -51,11 +51,11 @@ return(sampling_indices)
 
 ```{r pressure, echo=FALSE}
 
-induce_group_differnces <- function(num_true_modified, vector_of_ref_means, effect_size, path_to_record_truly_different_indices){ #record=T
+induce_group_differnces <- function(num_true_modified, vector_of_ref_means, effect_size, user_path){ #record=T
 set.seed(42)
   
 truly_different_indices <- sample(1:length(vector_of_ref_means), size=num_true_modified, replace = FALSE)
-filename <- paste0(path_to_record_truly_different_indices, '/truly_different_sites_indices.txt')
+filename <- paste0(user_path, '/truly_different_sites_indices.txt')
 write.table(truly_different_indices, filename, row.names = FALSE, col.names = FALSE, sep = " ")
 vector_of_affected_means <- vector_of_ref_means
 vector_of_affected_means[truly_different_indices] <- vector_of_ref_means[truly_different_indices]+effect_size
@@ -114,7 +114,7 @@ generate_col_names = function(data_frame,g1_number_of_samples,g2_number_of_sampl
 ```{r pressure, echo=FALSE}
 get_all_combinations = function(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name){
 all_combinations = expand.grid(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs)
-all_combinations$Va6 = as.String(user_path)
+all_combinations$Va6 = user_path
 all_combinations$Var7 = paste0(zip_file_name,1:nrow(all_combinations))
 return(all_combinations)
 }
@@ -158,8 +158,16 @@ beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
 
 ```{r pressure, echo=FALSE}
 
-simulator = function(total_num_samples,effect_size,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name){
-  
+#simulator = function(total_num_samples,effect_size,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name){
+ 
+simulator = function(combined_param_vector){ 
+total_num_samples = as.numeric(combined_param_vector[1])
+effect_size = as.numeric(combined_param_vector[2])
+healthy_proportion = as.numeric(combined_param_vector[3])
+num_true_modified = as.numeric(combined_param_vector[4])
+user_specified_n_CpGs = as.numeric(combined_param_vector[5])
+user_path = combined_param_vector[6]
+zip_file_name = combined_param_vector[7]
 #combining means asn SDs as one object 
 means_real_world = calculate_means(beta_matrix)
 SD_real_world = calculate_SD(beta_matrix)
@@ -184,7 +192,7 @@ simulated_data = generate_cpgs_for_groups(vector_of_ref_means,vector_of_affected
 colnames(simulated_data) = generate_col_names(simulated_data,g1_number_of_samples,g2_number_of_samples)
 
 file_name_simulated_data = paste0(user_path,"/Simulated data.txt")
-write.table(simulated_data, file_name_simulated_data,col.names = FALSE, row.names = FALSE)
+write.table(simulated_data, file_name_simulated_data,col.names = TRUE, row.names = TRUE)
 # Save the running parameters, simultaed methylation data matrix, and the truly differentially methylated CpG sites.
 param_names = c("Total number of samples","User-spesified number of CpGs","Healthy proportion","Effect size","Number of true modified CpG sites")
 param_values = c(total_num_samples,user_specified_n_CpGs,healthy_proportion,effect_size,num_true_modified)
@@ -203,31 +211,27 @@ create_zip(user_path,zip_file_name)
 
 
 ```{r pressure, echo=FALSE}
+multi_SimMethyl = function(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name){
+combination_df = get_all_combinations(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name)
+final_output <- apply(combination_df, 1, simulator)
+return(final_output)
+}
+
+```
+
+```{r pressure, echo=FALSE}
 #default parameters for the simulator
 user_path ="C:/Users/anast/Documents/Master 2021/Summer project 2022"
 zip_file_name ="SimMethyl_run_"
 
-total_num_samples <- 500
+#total_num_samples <- 500
 healthy_proportion <- 0.3
 num_true_modified <- 30
-effect_size <- 0.3
+#effect_size <- 0.3
 user_specified_n_CpGs <- 1000
 
 total_num_samples_vector <- c(100,200,300)
 effect_size_vector <- c(0.02,0.04,0.06,0.08,0.1)
 
-
+multi_SimMethyl(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name)
 ```
-
-```{r pressure, echo=FALSE}
-simulator(total_num_samples, healthy_proportion, num_true_modified, user_specified_n_CpGs, effect_size, user_path)
-```
-
-```{r pressure, echo=FALSE}
-combination_df = get_all_combinations(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name)
-```
-
-```{r pressure, echo=FALSE}
-run_parallel = apply(combi,1,print)
-```
-
