@@ -112,8 +112,20 @@ generate_col_names = function(data_frame,g1_number_of_samples,g2_number_of_sampl
 ```
 
 ```{r pressure, echo=FALSE}
+create_zip = function(user_path,zip_file_name){
+  path_directory = user_path
+  zipfile = paste0(user_path,"/",zip_file_name,".zip")
+  my_files = c(paste0(user_path,"/Simulated_data.txt"),paste0(user_path,"/truly_different_sites_indices.txt"),paste0(user_path,"/User_Parameters.txt"))
+  zip::zipr(zipfile = zipfile, files = my_files) 
+}
+
+```
+
+```{r pressure, echo=FALSE}
 
 library(GEOquery) #bioconductor
+library(purrr) #For create cartesian product (Get all parameter combinations)
+```
 ```
 
 ```{r pressure, echo=FALSE}
@@ -133,7 +145,7 @@ beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
 ```
 
 ```{r pressure, echo=FALSE}
-simulator = function(total_num_samples,healthy_proportion,num_true_modified,user_specified_n_CpGs,effect_size, user_path){
+simulator = function(total_num_samples,healthy_proportion,num_true_modified,user_specified_n_CpGs,effect_size, user_path, zip_file_name){
   
 #combining means asn SDs as one object 
 means_real_world = calculate_means(beta_matrix)
@@ -171,6 +183,8 @@ param_summary$Value = param_values
 
 file_name_parameters = paste0(user_path,"/User_Parameters.txt")
 write.table(param_summary,file_name_parameters,row.names = FALSE, col.names = TRUE, sep = " ")
+
+create_zip(user_path,zip_file_name)
 }
 ```
 
@@ -178,7 +192,7 @@ write.table(param_summary,file_name_parameters,row.names = FALSE, col.names = TR
 ```{r pressure, echo=FALSE}
 
 user_path ="C:/Users/anast/Documents/Master 2021/Summer project 2022"
-
+zip_file_name ="SimMethyl_output"
 
 #default parameters for the simulator
 total_num_samples <- 500
@@ -187,13 +201,12 @@ num_true_modified <- 30
 effect_size <- 0.3
 user_specified_n_CpGs <- 1000
 
-
 simulator(total_num_samples, healthy_proportion, num_true_modified, user_specified_n_CpGs, effect_size, user_path)
 
-zipfile = "C:/Users/anast/Documents/Master 2021/Summer project 2022/test.zip"
-my_files = c("C:/Users/anast/Documents/Master 2021/Summer project 2022/Simulated_data.txt","C:/Users/anast/Documents/Master 2021/Summer project 2022/truly_different_sites_indices.txt","C:/Users/anast/Documents/Master 2021/Summer project 2022/User_Parameters.txt")
-
-zip::zipr(zipfile = zipfile, files = my_files)
-
-
 ```
+
+
+```{r pressure, echo=FALSE}
+get_all_combinations = function(total_num_samples_vector,healthy_proportion_vector,num_true_modified_vector,user_specified_n_CpGs_vector,effect_size_vector)
+
+
