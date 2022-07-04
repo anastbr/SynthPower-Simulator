@@ -112,13 +112,24 @@ generate_col_names = function(data_frame,g1_number_of_samples,g2_number_of_sampl
 ```
 
 ```{r pressure, echo=FALSE}
+get_all_combinations = function(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name){
+all_combinations = expand.grid(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs)
+all_combinations$Va6 = as.String(user_path)
+all_combinations$Var7 = paste0(zip_file_name,1:nrow(all_combinations))
+return(all_combinations)
+}
+
+#test <- get_all_combinations(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name)
+
+```
+
+```{r pressure, echo=FALSE}
 create_zip = function(user_path,zip_file_name){
   path_directory = user_path
   zipfile = paste0(user_path,"/",zip_file_name,".zip")
   my_files = c(paste0(user_path,"/Simulated_data.txt"),paste0(user_path,"/truly_different_sites_indices.txt"),paste0(user_path,"/User_Parameters.txt"))
   zip::zipr(zipfile = zipfile, files = my_files) 
 }
-
 ```
 
 ```{r pressure, echo=FALSE}
@@ -138,6 +149,7 @@ clinical_data <- clinical_data[,c(2,41:44)]
 colnames(clinical_data)[c(2:5)] <- c("hiv_status", "gender", "tb_status", "timepoint")
 clinical_data <- clinical_data[order(clinical_data$tb_status),]
 beta_matrix <- exprs(gset)
+beta_matrix <-beta_matrix[1:5000,1:10]
 rm(gset)
 
 #selecting testing data
@@ -145,7 +157,8 @@ beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
 ```
 
 ```{r pressure, echo=FALSE}
-simulator = function(total_num_samples,healthy_proportion,num_true_modified,user_specified_n_CpGs,effect_size, user_path, zip_file_name){
+
+simulator = function(total_num_samples,effect_size,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name){
   
 #combining means asn SDs as one object 
 means_real_world = calculate_means(beta_matrix)
@@ -190,23 +203,31 @@ create_zip(user_path,zip_file_name)
 
 
 ```{r pressure, echo=FALSE}
-
-user_path ="C:/Users/anast/Documents/Master 2021/Summer project 2022"
-zip_file_name ="SimMethyl_output"
-
 #default parameters for the simulator
+user_path ="C:/Users/anast/Documents/Master 2021/Summer project 2022"
+zip_file_name ="SimMethyl_run_"
+
 total_num_samples <- 500
 healthy_proportion <- 0.3
 num_true_modified <- 30
 effect_size <- 0.3
 user_specified_n_CpGs <- 1000
 
-simulator(total_num_samples, healthy_proportion, num_true_modified, user_specified_n_CpGs, effect_size, user_path)
+total_num_samples_vector <- c(100,200,300)
+effect_size_vector <- c(0.02,0.04,0.06,0.08,0.1)
+
 
 ```
 
+```{r pressure, echo=FALSE}
+simulator(total_num_samples, healthy_proportion, num_true_modified, user_specified_n_CpGs, effect_size, user_path)
+```
 
 ```{r pressure, echo=FALSE}
-get_all_combinations = function(total_num_samples_vector,healthy_proportion_vector,num_true_modified_vector,user_specified_n_CpGs_vector,effect_size_vector)
+combination_df = get_all_combinations(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name)
+```
 
+```{r pressure, echo=FALSE}
+run_parallel = apply(combi,1,print)
+```
 
