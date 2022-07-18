@@ -142,16 +142,12 @@ create_zip = function(user_path,zip_file_name){
 ```
 
 ```{r pressure, echo=FALSE}
-#if (!require("BiocManager", quietly = TRUE))
-   # install.packages("BiocManager")
-#BiocManager::install("GEOquery")
 
-install.packages("schoolmath")
 library(schoolmath)
-#library(GEOquery) #bioconductor
-#library(purrr) #For create cartesian product (Get all parameter combinations)
-#library(zip)
-#library(matrixStats)
+library(GEOquery) #bioconductor
+library(purrr) #For create cartesian product (Get all parameter combinations)
+library(zip)
+library(matrixStats)
 
 
 ```
@@ -178,7 +174,7 @@ beta_matrix <-beta_matrix[1:5000,1:10]
 rm(gset)
 
 #selecting testing data
-#beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
+beta_matrix = beta_matrix[sample(nrow(beta_matrix), 1000, replace = FALSE), ]
 ```
 
 #simulator = function(total_num_samples,effect_size,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path, zip_file_name){
