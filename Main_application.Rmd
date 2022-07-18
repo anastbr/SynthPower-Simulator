@@ -189,7 +189,6 @@ rm(gset)
 # Save the running parameters, simultaed methylation data matrix, and the truly differentially methylated CpG sites.
 
 
-
 ```{r pressure, echo=FALSE}
 
 simulator = function(combined_param_vector){ 
