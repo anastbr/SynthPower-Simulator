@@ -22,7 +22,6 @@ output: html_document
 ```{r pressure, echo=FALSE}
 library(schoolmath) # use of is.negative() 
 library(GEOquery) #obtain the real-world data
-#library(purrr) 
 library(zip) 
 library(matrixStats) # calculate mean and SD based on dimension specified
 ```
@@ -30,7 +29,7 @@ library(matrixStats) # calculate mean and SD based on dimension specified
 ```{r pressure, echo=FALSE}
 # Function for calculating the mean of CpGs across all samples.
 calculate_means <- function (beta_values_matrix) {
-means <- matrixStats::rowMeans(beta_values_matrix, na.rm=TRUE)
+means <- rowMeans(beta_values_matrix, na.rm=TRUE)
 means <- na.omit(means)
 print(head(means))
 return(means)
@@ -65,7 +64,7 @@ return(sampling_indices)
 ```{r pressure, echo=FALSE}
 # Induce differences between groups by changing mean beta-values of selected CpGs. The modified CpGs are sampled from mean values of the reference group (control group). The output is the recorded indices of the truly modified CpGs and vector of means with introduced corresponding differences.
 
-induce_group_differnces <- function(num_true_modified, vector_of_ref_means, effect_size, user_path){ #record=T
+induce_group_differnces <- function(num_true_modified, vector_of_ref_means, effect_size, user_path){ 
 set.seed(42)
   
 truly_different_indices <- sample(1:length(vector_of_ref_means), size=num_true_modified, replace = FALSE)
@@ -73,7 +72,7 @@ filename <- paste0(user_path, '/truly_different_sites_indices.txt')
 write.table(truly_different_indices, filename, row.names = FALSE, col.names = FALSE, sep = " ")
 vector_of_affected_means <- vector_of_ref_means
 vector_of_affected_means[truly_different_indices] <- vector_of_ref_means[truly_different_indices]+effect_size
-vector_of_affected_means <- ifelse(vector_of_affected_means>1, 1, vector_of_affected_means) # keep produced values within the range (0 and 1) specific to beta-value
+vector_of_affected_means <- ifelse(vector_of_affected_means>1, 1, vector_of_affected_means) # keep modified means values within the range (0 and 1) specific to beta-value
 return(list(vector_of_affected_means,truly_different_indices))
 }
 ```
@@ -94,7 +93,7 @@ return(g1_g2)
 
 
 ```{r pressure, echo=FALSE}
-# Generate beta values for every CpG across all samples. Due to the range of the real beta values (0 and 1), we "truncate"/adjust the values within the range. 
+# Simulate beta values for every CpG across all samples. Due to the range of the real beta values (0 and 1), we "truncate"/adjust the values within the range. 
 sample_distribution = function(means_vector, sds_vector, number_of_samples_in_group){
   all_cpgs <- c()
   cpg_name <- c()
@@ -120,7 +119,7 @@ return(all_cpgs)
 
 
 ```{r pressure, echo=FALSE}
-# Generate methylation data for every group based on the shape parameters specific to the group ( different means and common standard deviation). The output is data frame with all samples and all CpGs.
+# Simulate methylation data for every group based on the shape parameters specific to the group (different means and common standard deviation). The output is data frame with all samples and all CpGs.
 generate_cpgs_for_groups = function(g1_means_vector, g2_means_vector, vector_sd, g1_number_of_samples, g2_number_of_samples){
 g1_cpgs <- sample_distribution(g1_means_vector, vector_sd, g1_number_of_samples)
 g2_cpgs <- sample_distribution(g2_means_vector, vector_sd, g2_number_of_samples)
@@ -145,7 +144,8 @@ get_all_combinations = function(total_num_samples_vector,effect_size_vector,heal
 all_combinations = expand.grid(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs)
 all_combinations$Va6 = user_path
 all_combinations$Var7 = paste0(zip_file_name,1:nrow(all_combinations))
-write.csv(all_combinations,"all_combinations.csv")
+colnames(all_combinations) = c("n_samples","effect_size","healthy_proportion","n_true_modified_CpGS","n_CpGs","user_path","zip_file_order")
+write.csv(all_combinations,"all_combinations.csv", row.names = FALSE)
 print(head(all_combinations))
 return(all_combinations)
 }
@@ -165,7 +165,7 @@ create_zip = function(user_path,zip_file_name){
 
 
 ```{r pressure, echo=FALSE}
-# Aggregated function which generates simulated data set for one environmental set-up (user-defined). The input is a vector with values for every parameter defining the environmental/experimental set-up. The output is the zip file with simulated data, indices of the truly modified CpGs, and input parameters of the user. 
+# Aggregated (main) function which generates simulated data set for one environmental set-up (user-defined). The input is a vector with values for every parameter defining the environmental/experimental set-up. The output is the zip file with simulated data, indices of the truly modified CpGs, and input parameters of the user. 
 simulator = function(combined_param_vector){ 
 total_num_samples = as.numeric(combined_param_vector[1])
 effect_size = as.numeric(combined_param_vector[2])
@@ -228,7 +228,10 @@ return(final_output)
 
 ```{r pressure, echo=FALSE}
 #Choose the real-world data 
-# In this case we have used a data set with two groups (healthy versus patients with tuberculosis). Beta matrix data include Immumina array with 850 000 cpG probes. 
+# In this case we have used a data set with two groups (healthy versus patients with tuberculosis). Beta matrix data include Immumina array with 850 000 cpG probes and 32 samples. 
+#Source: https://www.jci.org/articles/view/134622#SEC4
+#Tissue type: PBMCs
+ 
 GEO_real_world_data <- "GSE145714" # ID for real world data 
 
 gset <- getGEO(GEO_real_world_data, GSEMatrix =TRUE, getGPL=FALSE, destdir="example_dataset/")
@@ -245,6 +248,9 @@ clinical_data <- clinical_data[order(clinical_data$tb_status),]
 
 beta_matrix <- exprs(gset)
 
+#Creating a subset of the beta_matrix (to reduce running time during testing)
+beta_matrix <- beta_matrix[sample(1:nrow(beta_matrix),1000,replace = FALSE),sample(1:ncol(beta_matrix),10,replace = FALSE)]
+
 rm(gset)
 ```
 
@@ -257,12 +263,12 @@ zip_file_name ="SimMethyl_run_"
 
 # User-defined parameter input. Specify testing range as vector. The data will be saved in the same directory as working directory. 
 healthy_proportion <- 0.5
-num_true_modified <- c(10,30,60,120,200)
+num_true_modified <- 30
 
-user_specified_n_CpGs <- 2500
+user_specified_n_CpGs <- 500
 
-total_num_samples_vector <- c(20,60,100,140,180,220,260)
-effect_size_vector <- 0.05
+total_num_samples_vector <- c(20,60,100)
+effect_size_vector <- c(0.02,0.04,0.06)
 
 multi_SimMethyl(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name)
 
