@@ -249,7 +249,7 @@ clinical_data <- clinical_data[order(clinical_data$tb_status),]
 beta_matrix <- exprs(gset)
 
 #Creating a subset of the beta_matrix (to reduce running time during testing)
-beta_matrix <- beta_matrix[sample(1:nrow(beta_matrix),1000,replace = FALSE),sample(1:ncol(beta_matrix),10,replace = FALSE)]
+#beta_matrix <- beta_matrix[sample(1:nrow(beta_matrix),1000,replace = #FALSE),sample(1:ncol(beta_matrix),10,replace = FALSE)]
 
 rm(gset)
 ```
@@ -263,13 +263,12 @@ zip_file_name ="SimMethyl_run_"
 
 # User-defined parameter input. Specify testing range as vector. The data will be saved in the same directory as working directory. 
 healthy_proportion <- 0.5
-num_true_modified <- 30
+num_true_modified <- c(1,4,7,10,13)
 
-user_specified_n_CpGs <- 500
+user_specified_n_CpGs <- 1000
 
-total_num_samples_vector <- c(20,60,100)
-effect_size_vector <- c(0.02,0.04,0.06)
-
+total_num_samples_vector <- c(50,200,350,500,650,800,950)
+effect_size_vector <- 0.05
 multi_SimMethyl(total_num_samples_vector,effect_size_vector,healthy_proportion,num_true_modified,user_specified_n_CpGs,user_path,zip_file_name)
 
 end.time <- Sys.time()
